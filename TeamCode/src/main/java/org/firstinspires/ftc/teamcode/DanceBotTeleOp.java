@@ -61,7 +61,7 @@ public class DanceBotTeleOp extends LinearOpMode {
                 batteryVoltage());
         telemetry.addData("Status", "Ready (%d motors)", fourMotorDrive ? 4 : 2);
         telemetry.addData("Drive", "LS: drive/strafe; RS X: turn; RB: slow");
-        telemetry.addData("Operator", "Gamepad 2 RT: intake; LT: reverse; B: intake stop");
+        telemetry.addData("Intake", "Either gamepad RT: in; LT: reverse; B: stop");
         telemetry.addData("Battery", "%.2f V", batteryVoltage());
         telemetry.update();
 
@@ -77,11 +77,7 @@ public class DanceBotTeleOp extends LinearOpMode {
                 double strafe = fourMotorDrive ? applyDeadZone(gamepad1.left_stick_x) : 0.0;
                 double turn = applyDeadZone(gamepad1.right_stick_x);
 
-                double intakePower = 0.0;
-                if (intake != null && !gamepad2.b) {
-                    intakePower = applyDeadZone(gamepad2.right_trigger)
-                            - applyDeadZone(gamepad2.left_trigger);
-                }
+                double intakePower = getIntakePower();
 
                 double frontLeftPower = drive + strafe + turn;
                 double frontRightPower = drive - strafe - turn;
@@ -130,7 +126,7 @@ public class DanceBotTeleOp extends LinearOpMode {
             frontRight.setDirection(DcMotorSimple.Direction.FORWARD);
             frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
             backLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-            backRight.setDirection(DcMotorSimple.Direction.FORWARD);
+            backRight.setDirection(DcMotorSimple.Direction.REVERSE);
         } else {
             // Two-wheel DanceBot (config: dancebot-2wd.xml). Both motors sit on one
             // crossbar with shafts pointing outward, so they are mirror images.
@@ -166,6 +162,21 @@ public class DanceBotTeleOp extends LinearOpMode {
             return 0.0;
         }
         return Math.copySign((magnitude - STICK_DEAD_ZONE) / (1.0 - STICK_DEAD_ZONE), input);
+    }
+
+    private double getIntakePower() {
+        if (intake == null || gamepad1.b || gamepad2.b) {
+            return 0.0;
+        }
+
+        double gamepad2Power = applyDeadZone(gamepad2.right_trigger)
+                - applyDeadZone(gamepad2.left_trigger);
+        if (gamepad2Power != 0.0) {
+            return gamepad2Power;
+        }
+
+        return applyDeadZone(gamepad1.right_trigger)
+                - applyDeadZone(gamepad1.left_trigger);
     }
 
     private void setDrivePowers(double frontLeftPower, double backLeftPower,

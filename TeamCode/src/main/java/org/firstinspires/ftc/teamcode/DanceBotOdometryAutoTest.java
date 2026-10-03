@@ -12,8 +12,9 @@ import com.qualcomm.robotcore.util.Range;
 public class DanceBotOdometryAutoTest extends LinearOpMode {
     private static final double PARALLEL_TICKS_PER_INCH = 1757.55;
     private static final double CENTER_TICKS_PER_INCH = 1768.34;
-    private static final double LEFT_POD_Y_INCHES = 4.1395;
-    private static final double RIGHT_POD_Y_INCHES = -4.1395;
+    // Effective spacing calibrated against the correctly oriented Control Hub IMU.
+    private static final double LEFT_POD_Y_INCHES = 4.14345;
+    private static final double RIGHT_POD_Y_INCHES = -4.14345;
     private static final double CENTER_POD_X_INCHES = 0.0107;
 
     private static final double TRANSLATION_KP = 0.055;
@@ -21,13 +22,13 @@ public class DanceBotOdometryAutoTest extends LinearOpMode {
     private static final double MAX_DRIVE_POWER = 0.25;
     private static final double MAX_TURN_POWER = 0.20;
     private static final double MIN_DRIVE_POWER = 0.10;
-    private static final double MIN_TURN_POWER = 0.08;
+    // Enough authority for small heading corrections to overcome drivetrain friction.
+    private static final double MIN_TURN_POWER = 0.11;
     // Low-speed static friction leaves up to roughly 1.8 inches of residual error.
     private static final double POSITION_TOLERANCE_INCHES = 2.0;
-    // Low-speed turning settles about 5 degrees short due to drivetrain static friction.
-    private static final double HEADING_TOLERANCE_RADIANS = Math.toRadians(6.0);
+    private static final double HEADING_TOLERANCE_RADIANS = Math.toRadians(2.0);
     private static final double WAYPOINT_TIMEOUT_SECONDS = 12.0;
-    private static final double SETTLE_SECONDS = 0.25;
+    private static final double SETTLE_SECONDS = 0.40;
     private static final double MAX_ERROR_GROWTH_INCHES = 4.0;
 
     private DcMotor frontLeft;
@@ -56,7 +57,7 @@ public class DanceBotOdometryAutoTest extends LinearOpMode {
         frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
         backLeft.setDirection(DcMotorSimple.Direction.REVERSE);
         frontRight.setDirection(DcMotorSimple.Direction.FORWARD);
-        backRight.setDirection(DcMotorSimple.Direction.FORWARD);
+        backRight.setDirection(DcMotorSimple.Direction.REVERSE);
         setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         setBrake();
         stopDrive();
@@ -206,7 +207,9 @@ public class DanceBotOdometryAutoTest extends LinearOpMode {
     // Motor direction reverses the left encoder sign, so undo it for calibrated raw pod signs.
     private int readLeft() { return -backLeft.getCurrentPosition(); }
     private int readRight() { return -frontRight.getCurrentPosition(); }
-    private int readCenter() { return backRight.getCurrentPosition(); }
+    // The back-right motor direction reverses its external encoder reading, so undo it
+    // to preserve the center-pod sign used during calibration (physical left is positive).
+    private int readCenter() { return -backRight.getCurrentPosition(); }
 
     private void setMecanum(double forward, double left, double turn) {
         double fl = forward + left + turn;

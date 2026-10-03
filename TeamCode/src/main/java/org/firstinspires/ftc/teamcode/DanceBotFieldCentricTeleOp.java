@@ -23,9 +23,9 @@ public class DanceBotFieldCentricTeleOp extends LinearOpMode {
 
     // Change these two values if the Control Hub is mounted in another orientation.
     private static final RevHubOrientationOnRobot.LogoFacingDirection HUB_LOGO_DIRECTION =
-            RevHubOrientationOnRobot.LogoFacingDirection.UP;
+            RevHubOrientationOnRobot.LogoFacingDirection.FORWARD;
     private static final RevHubOrientationOnRobot.UsbFacingDirection HUB_USB_DIRECTION =
-            RevHubOrientationOnRobot.UsbFacingDirection.FORWARD;
+            RevHubOrientationOnRobot.UsbFacingDirection.UP;
 
     private DcMotor frontRight;
     private DcMotor frontLeft;
@@ -61,7 +61,7 @@ public class DanceBotFieldCentricTeleOp extends LinearOpMode {
         telemetry.addData("Status", "Ready (4 motors + IMU)");
         telemetry.addData("Drive", "LS: field drive/strafe; RS X: turn; RB: slow");
         telemetry.addData("Heading", "START: reset field forward");
-        telemetry.addData("Operator", "Gamepad 2 RT: intake; LT: reverse; B: intake stop");
+        telemetry.addData("Intake", "Either gamepad RT: in; LT: reverse; B: stop");
         telemetry.addData("Battery", "%.2f V", batteryVoltage());
         telemetry.update();
 
@@ -94,11 +94,7 @@ public class DanceBotFieldCentricTeleOp extends LinearOpMode {
                 double robotForward = fieldForward * cosYaw - fieldStrafe * sinYaw;
                 double robotStrafe = fieldForward * sinYaw + fieldStrafe * cosYaw;
 
-                double intakePower = 0.0;
-                if (intake != null && !gamepad2.b) {
-                    intakePower = applyDeadZone(gamepad2.right_trigger)
-                            - applyDeadZone(gamepad2.left_trigger);
-                }
+                double intakePower = getIntakePower();
 
                 double frontLeftPower = robotForward + robotStrafe + turn;
                 double frontRightPower = robotForward - robotStrafe - turn;
@@ -146,7 +142,7 @@ public class DanceBotFieldCentricTeleOp extends LinearOpMode {
         frontRight.setDirection(DcMotorSimple.Direction.FORWARD);
         frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
         backLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        backRight.setDirection(DcMotorSimple.Direction.FORWARD);
+        backRight.setDirection(DcMotorSimple.Direction.REVERSE);
     }
 
     private void setRunMode(DcMotor.RunMode mode) {
@@ -169,6 +165,21 @@ public class DanceBotFieldCentricTeleOp extends LinearOpMode {
             return 0.0;
         }
         return Math.copySign((magnitude - STICK_DEAD_ZONE) / (1.0 - STICK_DEAD_ZONE), input);
+    }
+
+    private double getIntakePower() {
+        if (intake == null || gamepad1.b || gamepad2.b) {
+            return 0.0;
+        }
+
+        double gamepad2Power = applyDeadZone(gamepad2.right_trigger)
+                - applyDeadZone(gamepad2.left_trigger);
+        if (gamepad2Power != 0.0) {
+            return gamepad2Power;
+        }
+
+        return applyDeadZone(gamepad1.right_trigger)
+                - applyDeadZone(gamepad1.left_trigger);
     }
 
     private void setDrivePowers(double frontLeftPower, double backLeftPower,
